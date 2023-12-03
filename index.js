@@ -165,6 +165,19 @@ async function run() {
       res.send(result);
     });
 
+    // get a specific test Data
+    app.get('/testdetails/:id', async (req, res) => {
+      const testId = req.params.id;
+      const query = { _id: new ObjectId(testId) };
+      try {
+        const result = await testCollection.findOne(query); 
+        res.send(result)
+      } catch (error) {
+        console.error('Error fetching test details:', error);
+        res.status(500).json({ message: 'Failed to fetch test details' });
+      }
+    });
+
     //get filtered dates from present to future
     app.get('/availabletests', async(req, res) => {
       const today = new Date()
@@ -240,6 +253,10 @@ async function run() {
         res.status(500).json({ message: "An error occurred while updating banner" });
       }
     });
+
+
+    // Payments
+    
 
 
     // Send a ping to confirm a successful connection
