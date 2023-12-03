@@ -33,6 +33,7 @@ async function run() {
     const userCollection = client.db("mediscanDB").collection("users");
     const testCollection = client.db("mediscanDB").collection("tests");
     const bannerCollection = client.db("mediscanDB").collection("banners");
+    const bookingCollection = client.db("mediscanDB").collection("bookings");
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
@@ -273,6 +274,27 @@ async function run() {
         clientSecret: paymentIntent.client_secret
       })
     });
+
+
+    //bookings
+    app.post("/bookings",verifyToken,  async (req, res) => {
+      const id = req.body.testId;
+      const filter = { _id: new ObjectId(id) };
+      const test = await testCollection.findOne(filter);
+      if (test && test.slots > 0) {
+        const updatedDoc = {
+          $set: { slots: test.slots - 1 }
+        };
+       const res2 = await testCollection.updateOne(filter, updatedDoc);
+       console.log(res2);
+
+      const booking = {...req.body, reportStatus: 'pending'}
+      console.log(booking);
+      const result1 = await bookingCollection.insertOne(booking);
+      res.send(result1)
+      }
+    })
+
 
 
     // Send a ping to confirm a successful connection
