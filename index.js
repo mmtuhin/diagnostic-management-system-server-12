@@ -31,6 +31,7 @@ async function run() {
     const upazilaCollection = client.db("mediscanDB").collection("upazilas");
     const userCollection = client.db("mediscanDB").collection("users");
     const testCollection = client.db("mediscanDB").collection("tests");
+    const bannerCollection = client.db("mediscanDB").collection("banners");
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
@@ -81,7 +82,7 @@ async function run() {
     });
 
     //Save user to db
-    app.post("/users",  async (req, res) => {
+    app.post("/users", async (req, res) => {
       const user = { status: "active", ...req.body };
       console.log(user);
       const result = await userCollection.insertOne(user);
@@ -97,7 +98,7 @@ async function run() {
     });
 
     //Make a user an ADMIN
-    app.patch("/users/admin/:id",verifyToken, verifyAdmin, async (req, res) => {
+    app.patch("/users/admin/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
@@ -110,7 +111,7 @@ async function run() {
     });
 
     //Checking if the logging user is ADMIN or NOT
-    app.get("/users/admin/:email",verifyToken, async (req, res) => {
+    app.get("/users/admin/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       console.log(email);
       console.log(req.decoded);
@@ -129,7 +130,7 @@ async function run() {
     })
 
     //Block a user
-    app.patch("/users/block/:id",verifyToken, verifyAdmin, async (req, res) => {
+    app.patch("/users/block/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
@@ -142,7 +143,7 @@ async function run() {
     });
 
     //Delete a user form DB
-    app.delete("/users/:id",verifyToken, verifyAdmin, async (req, res) => {
+    app.delete("/users/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await userCollection.deleteOne(query);
@@ -163,6 +164,83 @@ async function run() {
       const result = await testCollection.find().toArray();
       res.send(result);
     });
+
+    //get filtered dates from present to future
+    app.get('/availabletests', async(req, res) => {
+      const today = new Date()
+      const result = await testCollection.find({testStartDate: {$gte:today.toISOString()} }).toArray()
+      console.log(result)
+      res.send(result)
+    })
+
+    // Delete a test
+    app.delete("/tests/:id", verifyToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await testCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // Add A Banner
+    app.post("/banners",verifyToken,  async (req, res) => {
+      const banner = {...req.body, isActive: false}
+      console.log(banner);
+      const result = await bannerCollection.insertOne(banner);
+      res.send(result);
+    });
+
+    // Get All the banners
+    app.get("/banners",verifyToken, verifyAdmin,  async (req, res) => {
+      // console.log(req.decoded.email);
+      const result = await bannerCollection.find().toArray();
+      res.send(result);
+    });
+
+    //Find Active Banner
+    app.get('/banners/active', async (req, res) => {
+      try {
+        const activeBanner = await bannerCollection.find({ isActive: true }).toArray();
+        res.send(activeBanner)
+      } catch (error) {
+        console.error('Error fetching active banners:', error);
+        res.status(500).json({ message: 'Failed to fetch active banner' });
+      }
+    });
+
+    // Delete A banner
+    app.delete("/banners/:id", verifyToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bannerCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // make a Banner Active and others deactive status false
+    app.patch("/banners/activate/:id", async (req, res) => {
+      const id = req.params.id;   
+      try {
+    
+        // Find the banner with the given ID and update its isActive to true
+        const result = await bannerCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { isActive: true } }
+        );
+    
+        // Set isActive to false for other banners except the one updated
+        if (result.modifiedCount > 0) {
+          await bannerCollection.updateMany(
+            { _id: { $ne: new ObjectId(id) } },
+            { $set: { isActive: false } }
+          );
+        }
+    
+        res.status(200).json({ message: "Banner updated successfully" });
+      } catch (error) {
+        console.error("Error updating banner:", error);
+        res.status(500).json({ message: "An error occurred while updating banner" });
+      }
+    });
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
