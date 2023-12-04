@@ -316,6 +316,23 @@ async function run() {
       res.send(result);
     });
 
+    //get userspecific reservations
+    
+    app.get("/reservations/:email", async (req, res) => {
+      const email = req.params.email; // Correcting to use req.params.email
+      const presentDate = new Date(); // Get current date
+      const query = {
+        email: email,
+        bookingDate: { $gte: presentDate } // Retrieve bookings from the present to future dates
+      };
+      try {
+        const result = await bookingCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send("Error retrieving bookings");
+      }
+    });
+
     // Delete a Reservation
     app.delete("/reservations/:id", async (req, res) => {
       const id = req.params.id;
@@ -355,10 +372,10 @@ async function run() {
     });
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     //   await client.close();
