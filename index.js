@@ -318,12 +318,13 @@ async function run() {
 
     //get userspecific reservations
     
-    app.get("/reservations/:email", async (req, res) => {
+    app.get("/upcomingreservations/:email", async (req, res) => {
       const email = req.params.email; // Correcting to use req.params.email
-      const presentDate = new Date(); // Get current date
+      const presentDate = new Date().toISOString();
+      console.log(presentDate); // Get current date
       const query = {
         email: email,
-        bookingDate: { $gte: presentDate } // Retrieve bookings from the present to future dates
+        date: { $gte: presentDate } // Retrieve bookings from the present to future dates
       };
       try {
         const result = await bookingCollection.find(query).toArray();
